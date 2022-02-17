@@ -53,11 +53,6 @@ pub fn emit_v2_operation(attrs: TokenStream, input: TokenStream) -> TokenStream 
         struct_definition = quote!(struct #unit_struct #ty_generics { p: std::marker::PhantomData<(#generics_params)> } )
     }
 
-    // Get rid of async prefix. In the end, we'll have them all as `impl Future` thingies.
-    if item_ast.sig.asyncness.is_some() {
-        item_ast.sig.asyncness = None;
-    }
-
     let mut wrapper = quote!(paperclip::actix::ResponseWrapper<actix_web::HttpResponse, #unit_struct #ty_generics>);
     let mut is_impl_trait = false;
     let mut is_responder = false;
@@ -81,14 +76,14 @@ pub fn emit_v2_operation(attrs: TokenStream, input: TokenStream) -> TokenStream 
                 is_responder = true;
                 *ty = Box::new(
                     syn::parse2(quote!(
-                        impl std::future::Future<Output=paperclip::actix::ResponderWrapper<#ty>>
+                        impl <Output=paperclip::actix::ResponderWrapper<#ty>>
                     ))
                     .expect("parsing impl trait"),
                 );
             } else if !is_impl_trait {
                 // Any handler that's not returning an impl trait should return an `impl Future`
                 *ty = Box::new(
-                    syn::parse2(quote!(impl std::future::Future<Output=#ty>))
+                    syn::parse2(quote!(<Output=#ty>))
                         .expect("parsing impl trait"),
                 );
             }
